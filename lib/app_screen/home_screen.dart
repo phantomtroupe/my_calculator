@@ -91,37 +91,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // void shuntingYardAlgorithm(){
-  //   List<String> output = new List<String>();
-  //   List<String> symbol = new List<String>();
-  //   String input = "2x-3+4";
-
-  //   for(int i = 0; i < input.length; i++){
-  //     if(isNumeric(input[i])){
-  //       output.add(input[i]);
-  //     }else{
-  //       if(input[i] == "-"){
-  //         if(i == 0){
-  //           output.add("u"+input[i+1]);
-  //           i+=1;
-  //         }else{
-  //           if(!isNumeric(input[i-1])){
-  //             output.add("u"+input[i+1]);
-  //             i+=1;
-  //           }
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
-
-  // bool isNumeric(String s){
-  //   if(s==null){
-  //     return null;
-  //   }
-  //   return double.parse(s, (e)=>null) != null;
-  // }
-
   void btnPlusMinus() {
     if (currentOperation != "") {
       if (currentOperation.length == 1) {
@@ -141,17 +110,158 @@ class _HomeScreenState extends State<HomeScreen> {
               number.reversed.join();
         } else {
           List<String> number = new List<String>();
-          for (int i = currentOperation.length - 1; i > 0; i--) {
-            if (currentOperation[i] != "-" && currentOperation[i] != "+" && currentOperation[i] != "*" && currentOperation[i] != "/") {
+          for (int i = currentOperation.length - 1; i >= 0; i--) {
+            if (currentOperation[i] != "-" &&
+                currentOperation[i] != "+" &&
+                currentOperation[i] != "x" &&
+                currentOperation[i] != "/") {
               number.add(currentOperation[i]);
             } else {
               break;
             }
           }
-          currentOperation = "(-${currentOperation.substring(0,currentOperation.length - number.length)}${number.reversed.join()})";
+          currentOperation =
+              "${currentOperation.substring(0, currentOperation.length - number.length)}(-${number.reversed.join()})";
         }
       }
       setState(() {});
+    }
+  }
+
+  void btnResult() {
+    List<String> output = new List<String>();
+    List<String> symbol = new List<String>();
+    String input = currentOperation;
+    if (currentOperation.length != 1) {
+      for (int i = 0; i < input.length; i++) {
+        if (isNumeric(input[i])) {
+          if (i + 1 == input.length) {
+            output.add(input[i]);
+          } else {
+            if (input[i + 1].contains(".")) {
+              String number = "";
+              int indexPassed = 0;
+              while (i + indexPassed != input.length) {
+                if(input[i + indexPassed] != "x" &&
+                  input[i + indexPassed] != "/" &&
+                  input[i + indexPassed] != "+" &&
+                  input[i + indexPassed] != "-"){
+                    number += input[i + indexPassed];
+                    indexPassed += 1;
+                  }else{
+                    break;
+                  }
+              }
+
+              output.add(number);
+              i += indexPassed - 1;
+            } else {
+              String val = "";
+              int indexPassed = 0;
+              for(int j = i; j < input.length; j++){
+                if(input[j] != "x" && input[j] != "/" && input[j] != "+" && input[j] != "-"){
+                  val += input[j];
+                }else{
+                  indexPassed += j;
+                  break;
+                }
+              }
+              i += indexPassed - 1;
+              output.add(val);
+            }
+          }
+        } else {
+          if (input[i] == "+" ||
+              input[i] == "-" ||
+              input[i] == "x" ||
+              input[i] == "/") {
+            if (symbol.length == 0) {
+              symbol.add(input[i]);
+            } else {
+              if (symbol[symbol.length - 1] == "x" ||
+                  symbol[symbol.length - 1] == "/" ||
+                  symbol[symbol.length - 1] == "^") {
+                output.add(symbol[symbol.length - 1]);
+                symbol.removeLast();
+                symbol.add(input[i]);
+              } else {
+                symbol.add(input[i]);
+              }
+            }
+          } else if (input[i] == "(") {
+            String number = "u";
+            int indexPassed = 2;
+            while (input[i + indexPassed] != ")") {
+              number += input[i + indexPassed];
+              indexPassed += 1;
+            }
+
+            output.add(number);
+            i += indexPassed;
+          }
+        }
+      }
+    }
+
+    List<String> result = new List<String>();
+    result.addAll(output);
+    result.addAll(symbol.reversed);
+    print(result);
+    List<double> number = new List<double>();
+    for(int i = 0; i < result.length; i++){
+      if(isNumeric(result[i]) || result[i].contains("u")){
+        if(result[i].contains("u")){
+          double negateNumber = double.parse(result[i].substring(1,result[i].length));
+          number.add(negateNumber * -1);
+        }else{
+          number.add(double.parse(result[i]));
+        }
+      }else{
+        double val = 0;
+        switch(result[i]){
+          case "/" :
+            val = number[number.length - 2] / number[number.length - 1];
+            number.removeLast();
+            number.removeLast();
+            number.add(val);
+            break;
+          case "x" :
+            val = number[number.length - 2] * number[number.length - 1];
+            number.removeLast();
+            number.removeLast();
+            number.add(val);
+            break;
+          case "+" :
+            val = number[number.length - 2] + number[number.length - 1];
+            number.removeLast();
+            number.removeLast();
+            number.add(val);
+            break;
+          case "-" :
+            val = number[number.length - 2] - number[number.length - 1];
+            number.removeLast();
+            number.removeLast();
+            number.add(val);
+            break;  
+        }
+      }
+    }
+
+    setState(() {
+      history = currentOperation;
+     if(int.parse(number[0].toString().split(".")[1]) == 0){
+       currentOperation = number[0] < 0 ? "(${number[0].toInt()})" : number[0].toInt().toString();
+     }else{
+       currentOperation = number[0] < 0 ? "(${number[0]})" : number[0].toString();
+     }
+    });
+  }
+
+  bool isNumeric(String s) {
+    if (s == null) {
+      return null;
+    } else {
+      return double.parse(s, (e) => null) != null;
     }
   }
 
@@ -171,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 scrollDirection: Axis.horizontal,
                 children: <Widget>[
                   Text(
-                    "",
+                    "$history",
                     style:
                         TextStyle(fontSize: 35.0, fontWeight: FontWeight.bold),
                   )
@@ -603,7 +713,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               right: BorderSide(
                                   width: 1.0, color: Colors.grey[300]))),
                       child: FlatButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          btnResult();
+                        },
                         child: Text("=", style: TextStyle(fontSize: 35.0)),
                       ),
                     ),
